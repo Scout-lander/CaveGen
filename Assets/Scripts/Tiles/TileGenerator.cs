@@ -30,7 +30,7 @@ public class TileGenerator : MonoBehaviour
     {
         if (playerPrefab != null)
         {
-            // Spawn the player slightly off-center if necessary to avoid instant snapping behavior
+            // Spawn the player at the current tile position
             playerInstance = Instantiate(playerPrefab, currentTilePosition, Quaternion.identity);
 
             // Ensure the player GameObject is active
@@ -52,6 +52,7 @@ public class TileGenerator : MonoBehaviour
         {
             playerPath.Pop(); // Backtrack to the previous tile
             currentTilePosition = nextTilePosition;
+            Debug.Log("Backtracking to tile at position: " + nextTilePosition);
             return;
         }
 
@@ -62,10 +63,12 @@ public class TileGenerator : MonoBehaviour
             if (visitedTiles.ContainsKey(nextTilePosition))
             {
                 RestoreTile(nextTilePosition);
+                Debug.Log("Restoring visited tile at position: " + nextTilePosition);
             }
             else
             {
                 GenerateTile(nextTilePosition, false, direction); // Pass the entry direction
+                Debug.Log("Generating new tile at position: " + nextTilePosition);
             }
         }
 
@@ -86,11 +89,15 @@ public class TileGenerator : MonoBehaviour
             tileScript.SetPosition(position);
 
             // Initialize the tile with paths and save its state
-            tileScript.InitializeTile(startingTile: initialTile, entryDirection: entryDirection); // Pass the entry direction
+            tileScript.InitializeTile(startingTile: initialTile, entryDirection: entryDirection);
             if (!initialTile) 
             {
                 visitedTiles[position] = tileScript.SaveState(); // Save the state for future restoration
             }
+        }
+        else
+        {
+            Debug.LogError("Tile prefab is missing the Tile script.");
         }
 
         // Add the newly created tile to the spawned tiles dictionary
@@ -105,6 +112,10 @@ public class TileGenerator : MonoBehaviour
         if (tileScript != null)
         {
             tileScript.RestoreState(visitedTiles[position]); // Use the saved state to restore paths
+        }
+        else
+        {
+            Debug.LogError("Tile prefab is missing the Tile script.");
         }
 
         // Add the restored tile to the dictionary of spawned tiles

@@ -8,7 +8,7 @@ public class CharacterMovement : MonoBehaviour
     private bool isMoving = false; // Flag to indicate if the player is currently moving
     private Vector2 moveDirection; // Current movement direction
     private bool awaitingBattle = false; // Flag to check if a battle should start after reaching the center
-
+    public bool inCombat;
     // UI Buttons for controlling player movement
     public Button upButton;
     public Button downButton;
@@ -166,7 +166,7 @@ public class CharacterMovement : MonoBehaviour
     // Handle arrow key input for movement
     private void HandleKeyboardInput()
     {
-        if (!isMoving) // Only check for input if not currently moving
+        if (!isMoving && !fightUIManager.InCombat) // Only check for input if not currently moving
         {
             if (Input.GetKeyDown(KeyCode.UpArrow) && CanMoveInDirection(Vector2.up))
             {

@@ -29,6 +29,8 @@ public class FightUIManager : MonoBehaviour
     private EnemyStats enemyStats;      // Reference to the enemy's stats
     private CharacterMovement characterMovement; // Reference to the CharacterMovement script
 
+    public bool InCombat;
+
     void Start()
     {
         // Assign button listeners
@@ -50,6 +52,7 @@ public class FightUIManager : MonoBehaviour
     {
         playerStats = player;
         enemyStats = enemy;
+        InCombat = true;
 
         // Update the UI with player and enemy details
         UpdatePlayerUI();
@@ -140,6 +143,12 @@ public class FightUIManager : MonoBehaviour
         combatLogText.text += message + "\n"; // Update TMP text
     }
 
+    // Clear the combat log text
+    private void ClearCombatLog()
+    {
+        combatLogText.text = ""; // Clear the TMP text
+    }
+
     // Update the player's health UI
     private void UpdatePlayerHealthUI()
     {
@@ -188,6 +197,9 @@ public class FightUIManager : MonoBehaviour
     // Handle the restart button click
     private void OnRestartButtonClicked()
     {
+        // Clear combat log before restarting
+        ClearCombatLog();
+
         // Reload the current scene to restart the game
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
@@ -195,8 +207,10 @@ public class FightUIManager : MonoBehaviour
     // End the fight and hide the fight UI
     private void EndFight()
     {
+        ClearCombatLog(); // Clear combat log when the fight ends
         fightPanel.SetActive(false);  // Hide the fight UI
         moveButtons.SetActive(true);  // Show movement buttons again
+        InCombat = false;
 
         // If the player is not at the center of the tile, continue moving them to the center
         if (characterMovement != null)
