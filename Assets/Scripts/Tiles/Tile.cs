@@ -1,4 +1,12 @@
 using UnityEngine;
+using System.Collections.Generic;
+
+[System.Serializable]
+public class EnemySpawnInfo
+{
+    public GameObject enemyPrefab;   // The enemy prefab
+    [Range(0, 100)] public float spawnChance; // The chance that this enemy will spawn
+}
 
 public class Tile : MonoBehaviour
 {
@@ -15,9 +23,9 @@ public class Tile : MonoBehaviour
     public GameObject pathLeftPrefab;
     public GameObject pathRightPrefab;
 
-    // Enemy prefab
-    public GameObject enemyPrefab;
-    private GameObject spawnedEnemy; // Reference to the spawned enemy
+    // List of possible enemies to spawn on this tile
+    public List<EnemySpawnInfo> enemySpawnInfos = new List<EnemySpawnInfo>();
+    private List<GameObject> spawnedEnemies = new List<GameObject>(); // List of spawned enemies
 
     // Initialize the tile's paths; ensure backtracking path is always open
     public void InitializeTile(bool startingTile, Vector2 entryDirection)
@@ -41,8 +49,8 @@ public class Tile : MonoBehaviour
             else if (entryDirection == Vector2.left) canMoveRight = true;
             else if (entryDirection == Vector2.right) canMoveLeft = true;
 
-            // Spawn an enemy on non-starting tiles
-            SpawnEnemy();
+            // Spawn enemies on non-starting tiles
+            SpawnEnemies();
         }
 
         // Spawn paths based on the available directions
@@ -89,27 +97,30 @@ public class Tile : MonoBehaviour
         }
     }
 
-    // Spawn an enemy at the center of the tile, if conditions allow
-    private void SpawnEnemy()
+    // Spawn enemies based on their spawn chances
+    private void SpawnEnemies()
     {
-        // Randomly decide whether to spawn an enemy (50% chance)
-        if (enemyPrefab != null && Random.value > 0.5f)
+        foreach (var enemyInfo in enemySpawnInfos)
         {
-            Vector3 enemyPosition = transform.position; // Center of the tile
-            spawnedEnemy = Instantiate(enemyPrefab, enemyPosition, Quaternion.identity, transform);
+            if (Random.Range(0f, 100f) <= enemyInfo.spawnChance)
+            {
+                Vector3 enemyPosition = transform.position; // Spawn enemies at the center of the tile
+                GameObject spawnedEnemy = Instantiate(enemyInfo.enemyPrefab, enemyPosition, Quaternion.identity, transform);
+                spawnedEnemies.Add(spawnedEnemy);
+            }
         }
     }
 
-    // Check if the tile has an enemy
+    // Check if the tile has any enemies
     public bool HasEnemy()
     {
-        return spawnedEnemy != null;
+        return spawnedEnemies.Count > 0;
     }
 
-    // Get the spawned enemy
-    public GameObject GetEnemy()
+    // Get the list of spawned enemies
+    public List<GameObject> GetEnemies()
     {
-        return spawnedEnemy;
+        return spawnedEnemies;
     }
 
     // Save the current state of the tile's paths for future restoration

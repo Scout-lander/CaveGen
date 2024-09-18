@@ -51,6 +51,7 @@ public class EnemyStats : MonoBehaviour
 
         if (currentHealth <= 0)
         {
+            currentHealth = 0; // Set health to 0 to avoid negative values
             Die();
         }
     }
@@ -65,8 +66,17 @@ public class EnemyStats : MonoBehaviour
     private void Die()
     {
         Debug.Log("Enemy has died.");
-        // Handle enemy death (e.g., remove from game, drop loot)
+        // Handle enemy death (e.g., stop attacks, remove from game, drop loot)
         StopAllCoroutines(); // Stop auto-attacks when the enemy dies
-        Destroy(gameObject); // Destroy the enemy GameObject
+
+        // Instead of destroying the enemy immediately, signal to the FightUIManager that this enemy has died
+        FightUIManager fightUI = FindObjectOfType<FightUIManager>();
+        if (fightUI != null)
+        {
+            fightUI.OnEnemyDeath(this); // Notify the FightUIManager that this enemy has died
+        }
+
+        // Optionally add some delay before destroying the enemy GameObject
+        Destroy(gameObject, 1f); // Destroy the enemy GameObject after a short delay
     }
 }

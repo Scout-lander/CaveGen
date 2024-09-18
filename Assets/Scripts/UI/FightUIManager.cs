@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro; // Import TextMeshPro namespace
 using UnityEngine.SceneManagement; // Import SceneManagement for restarting the game
+using System.Collections.Generic; // Needed for List<>
 
 public class FightUIManager : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class FightUIManager : MonoBehaviour
     public Button healButton;           // Heal button
     public TMP_Text combatLogText;      // TMP_Text for combat log
     public GameObject moveButtons;      // Parent GameObject for movement buttons
+    public Button closeFightUIButton;   // Button to close the fight UI
 
     // UI elements for displaying player
     public Image playerImage;           // Image component for displaying the player
@@ -26,7 +28,8 @@ public class FightUIManager : MonoBehaviour
     public Button restartButton;        // Button to restart the game
 
     private PlayerStats playerStats;    // Reference to the player's stats
-    private EnemyStats enemyStats;      // Reference to the enemy's stats
+    private List<EnemyStats> enemyStatsList; // Reference to the list of enemies
+    private int currentEnemyIndex = 0;  // Track which enemy is currently being fought
     private CharacterMovement characterMovement; // Reference to the CharacterMovement script
 
     public bool InCombat;
@@ -37,21 +40,25 @@ public class FightUIManager : MonoBehaviour
         attackButton.onClick.AddListener(OnAttackButtonClicked);
         healButton.onClick.AddListener(OnHealButtonClicked);
         restartButton.onClick.AddListener(OnRestartButtonClicked);
+        closeFightUIButton.onClick.AddListener(CloseFightUI);
 
         // Initially hide the fight panel, death message, and restart button
         fightPanel.SetActive(false);
         deathMessageText.gameObject.SetActive(false);
         restartButton.gameObject.SetActive(false);
+        closeFightUIButton.gameObject.SetActive(false); 
 
         // Find the CharacterMovement component on the player
         characterMovement = FindObjectOfType<CharacterMovement>();
     }
 
-    // Method to initialize and show the fight UI
-    public void StartFight(PlayerStats player, EnemyStats enemy)
+    // Method to initialize and show the fight UI for multiple enemies
+    public void StartFight(PlayerStats player, List<EnemyStats> enemies)
     {
+        //ClearCombatLog(); // Clear combat log when the fight Starts
         playerStats = player;
-        enemyStats = enemy;
+        enemyStatsList = enemies;
+        currentEnemyIndex = 0; // Start with the first enemy
         InCombat = true;
 
         // Update the UI with player and enemy details
@@ -63,7 +70,7 @@ public class FightUIManager : MonoBehaviour
         moveButtons.SetActive(false);
 
         // Log initial combat message
-        UpdateCombatLog("A wild " + enemy.name + " appears!");
+        UpdateCombatLog("A wild " + enemyStatsList[currentEnemyIndex].name + " appears!");
     }
 
     // Update the player UI elements with the player's data
@@ -71,41 +78,45 @@ public class FightUIManager : MonoBehaviour
     {
         if (playerStats != null)
         {
-            // Assuming the player has a sprite assigned to its GameObject or through a scriptable object
             playerImage.sprite = playerStats.GetComponent<SpriteRenderer>().sprite; // Display player sprite
             playerNameText.text = playerStats.name; // Display player name
             playerHealthText.text = "Health: " + playerStats.currentHealth; // Display player health
         }
     }
 
-    // Update the enemy UI elements with the enemy's data
+    // Update the enemy UI elements with the current enemy's data
     private void UpdateEnemyUI()
     {
-        if (enemyStats != null)
+        if (currentEnemyIndex < enemyStatsList.Count)
         {
-            // Assuming the enemy has a sprite assigned to its GameObject or through a scriptable object
-            enemyImage.sprite = enemyStats.GetComponent<SpriteRenderer>().sprite; // Display enemy sprite
-            enemyNameText.text = enemyStats.name; // Display enemy name
-            enemyHealthText.text = "Health: " + enemyStats.currentHealth; // Display enemy health
+            var currentEnemy = enemyStatsList[currentEnemyIndex];
+            if (currentEnemy != null && currentEnemy.gameObject != null) // Check if the enemy still exists
+            {
+                enemyImage.sprite = currentEnemy.GetComponent<SpriteRenderer>().sprite;
+                enemyNameText.text = currentEnemy.name;
+                enemyHealthText.text = "Health: " + currentEnemy.currentHealth;
+            }
         }
     }
 
     // Handle the attack button click
     private void OnAttackButtonClicked()
     {
-        if (playerStats != null && enemyStats != null)
+        if (playerStats != null && enemyStatsList.Count > currentEnemyIndex)
         {
-            // Player attacks the enemy
-            playerStats.Attack(enemyStats);
-            UpdateCombatLog("Player attacks enemy for " + playerStats.attackPower + " damage.");
+            EnemyStats currentEnemy = enemyStatsList[currentEnemyIndex];
+
+            // Player attacks the current enemy
+            playerStats.Attack(currentEnemy);
+            UpdateCombatLog("Player attacks " + currentEnemy.name + " for " + playerStats.attackPower + " damage.");
             UpdateEnemyHealthUI(); // Update enemy health display
 
-            // Check if the enemy is still alive
-            if (enemyStats.currentHealth > 0)
+            // Check if the current enemy is still alive
+            if (currentEnemy.currentHealth > 0)
             {
                 // Enemy attacks back
-                enemyStats.Attack(playerStats);
-                UpdateCombatLog("Enemy attacks player for " + enemyStats.attackPower + " damage.");
+                currentEnemy.Attack(playerStats);
+                UpdateCombatLog(currentEnemy.name + " attacks player for " + currentEnemy.attackPower + " damage.");
                 UpdatePlayerHealthUI(); // Update player health display
             }
 
@@ -125,10 +136,10 @@ public class FightUIManager : MonoBehaviour
             UpdatePlayerHealthUI(); // Update player health display
 
             // Enemy's turn after healing
-            if (enemyStats != null && enemyStats.currentHealth > 0)
+            if (enemyStatsList[currentEnemyIndex].currentHealth > 0)
             {
-                enemyStats.Attack(playerStats);
-                UpdateCombatLog("Enemy attacks player for " + enemyStats.attackPower + " damage.");
+                enemyStatsList[currentEnemyIndex].Attack(playerStats);
+                UpdateCombatLog(enemyStatsList[currentEnemyIndex].name + " attacks player for " + enemyStatsList[currentEnemyIndex].attackPower + " damage.");
                 UpdatePlayerHealthUI(); // Update player health display
             }
 
@@ -161,9 +172,9 @@ public class FightUIManager : MonoBehaviour
     // Update the enemy's health UI
     private void UpdateEnemyHealthUI()
     {
-        if (enemyHealthText != null && enemyStats != null)
+        if (enemyHealthText != null && enemyStatsList.Count > currentEnemyIndex)
         {
-            enemyHealthText.text = "Health: " + enemyStats.currentHealth; // Update health display
+            enemyHealthText.text = "Health: " + enemyStatsList[currentEnemyIndex].currentHealth; // Update health display
         }
     }
 
@@ -175,10 +186,23 @@ public class FightUIManager : MonoBehaviour
             UpdateCombatLog("Player has been defeated!");
             ShowDeathMessage(); // Show the "You Died" message and restart button
         }
-        else if (enemyStats.currentHealth <= 0)
+        else if (enemyStatsList[currentEnemyIndex].currentHealth <= 0)
         {
-            UpdateCombatLog("Enemy has been defeated!");
-            EndFight();
+            UpdateCombatLog(enemyStatsList[currentEnemyIndex].name + " has been defeated!");
+
+            currentEnemyIndex++; // Move to the next enemy
+
+            // Check if there are more enemies to fight
+            if (currentEnemyIndex < enemyStatsList.Count)
+            {
+                UpdateEnemyUI(); // Update the UI with the new enemy
+                UpdateCombatLog("A wild " + enemyStatsList[currentEnemyIndex].name + " appears!");
+            }
+            else
+            {
+                // All enemies are defeated
+                EndFight(); // End the fight after all enemies are defeated
+            }
         }
     }
 
@@ -198,24 +222,51 @@ public class FightUIManager : MonoBehaviour
     private void OnRestartButtonClicked()
     {
         // Clear combat log before restarting
-        ClearCombatLog();
+        //ClearCombatLog();
 
         // Reload the current scene to restart the game
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
+    // Method to handle when an enemy dies
+    public void OnEnemyDeath(EnemyStats enemy)
+    {
+        EndFight();
+        
+    }
+
     // End the fight and hide the fight UI
     private void EndFight()
     {
-        ClearCombatLog(); // Clear combat log when the fight ends
+        //ClearCombatLog(); // Clear combat log when the fight ends
         fightPanel.SetActive(false);  // Hide the fight UI
         moveButtons.SetActive(true);  // Show movement buttons again
         InCombat = false;
+
+        // Safely destroy any remaining enemy game objects (after UI is cleared)
+        foreach (var enemy in enemyStatsList)
+        {
+            if (enemy != null && enemy.gameObject != null)
+            {
+                Destroy(enemy.gameObject); // Destroy any remaining enemy game objects
+            }
+        }
 
         // If the player is not at the center of the tile, continue moving them to the center
         if (characterMovement != null)
         {
             characterMovement.MoveToTileCenterIfNeeded();
         }
+
+        // Optionally, you can enable the "Close Fight UI" button if you want manual control over closing the fight panel
+        closeFightUIButton.gameObject.SetActive(true); // Show the close button
+    }
+
+    private void CloseFightUI()
+    {
+        fightPanel.SetActive(false);
+        moveButtons.SetActive(true);
+        closeFightUIButton.gameObject.SetActive(false); // Hide the close button
+        ClearCombatLog(); // Clear combat log 
     }
 }

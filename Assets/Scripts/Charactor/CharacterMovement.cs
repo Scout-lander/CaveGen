@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 public class CharacterMovement : MonoBehaviour
 {
@@ -9,6 +10,7 @@ public class CharacterMovement : MonoBehaviour
     private Vector2 moveDirection; // Current movement direction
     private bool awaitingBattle = false; // Flag to check if a battle should start after reaching the center
     public bool inCombat;
+    
     // UI Buttons for controlling player movement
     public Button upButton;
     public Button downButton;
@@ -166,7 +168,7 @@ public class CharacterMovement : MonoBehaviour
     // Handle arrow key input for movement
     private void HandleKeyboardInput()
     {
-        if (!isMoving && !fightUIManager.InCombat) // Only check for input if not currently moving
+        if (!isMoving && !inCombat) // Only check for input if not currently moving
         {
             if (Input.GetKeyDown(KeyCode.UpArrow) && CanMoveInDirection(Vector2.up))
             {
@@ -215,17 +217,28 @@ public class CharacterMovement : MonoBehaviour
         return currentTile != null ? currentTile.GetPosition() : transform.position;
     }
 
-    // Trigger the fight UI if an enemy is present
+    // Trigger the fight UI if any enemies are present
     private void TriggerFightUIIfEnemyPresent()
     {
         if (currentTile != null && currentTile.HasEnemy())
         {
-            EnemyStats enemyStats = currentTile.GetEnemy().GetComponent<EnemyStats>();
+            List<GameObject> enemies = currentTile.GetEnemies();
+            List<EnemyStats> enemyStatsList = new List<EnemyStats>();
+
+            foreach (GameObject enemy in enemies)
+            {
+                EnemyStats enemyStats = enemy.GetComponent<EnemyStats>();
+                if (enemyStats != null)
+                {
+                    enemyStatsList.Add(enemyStats);
+                }
+            }
+
             PlayerStats playerStats = GetComponent<PlayerStats>();
 
-            if (enemyStats != null && playerStats != null)
+            if (enemyStatsList.Count > 0 && playerStats != null)
             {
-                fightUIManager.StartFight(playerStats, enemyStats);
+                fightUIManager.StartFight(playerStats, enemyStatsList);
             }
         }
     }
